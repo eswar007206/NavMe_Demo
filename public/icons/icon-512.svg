@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#0c1220"/>
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#3b82f6" stroke-width="15" opacity="0.3"/>
+  <circle cx="256" cy="256" r="92" fill="none" stroke="#3b82f6" stroke-width="10" opacity="0.5"/>
+  <circle cx="256" cy="256" r="27" fill="#3b82f6"/>
+  <path d="M256 96 L256 150 M256 362 L256 416 M96 256 L150 256 M362 256 L416 256" stroke="#3b82f6" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+  <text x="256" y="472" text-anchor="middle" fill="#3b82f6" font-family="sans-serif" font-size="42" font-weight="bold">NavMe</text>
+</svg>
