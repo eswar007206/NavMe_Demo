@@ -1,6 +1,6 @@
 {
-  "name": "Pinnacle — Venue Intelligence",
-  "short_name": "Pinnacle",
+  "name": "NavMe Demo — Venue Intelligence",
+  "short_name": "NavMe Demo",
   "description": "AR navigation & facility management for airports, stadiums, and world-class venues",
   "start_url": "/",
   "display": "standalone",

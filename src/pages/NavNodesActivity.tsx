@@ -135,7 +135,7 @@ export default function NavNodesActivity() {
           </div>
         ) : chartData.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[250px] sm:h-[400px] text-muted-foreground">
-            <img src="/favicon.ico" alt="Pinnacle" className="w-16 h-16 mb-4 opacity-30" />
+            <img src="/favicon.ico" alt="NavMe Demo" className="w-16 h-16 mb-4 opacity-30" />
             <p className="text-sm font-medium">No activity recorded yet</p>
             <p className="text-xs mt-1">Activity will appear here once users start navigating</p>
           </div>

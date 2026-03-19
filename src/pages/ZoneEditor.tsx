@@ -38,7 +38,7 @@ interface DbZone {
   floor: string;
 }
 
-type ZoneType = "normal" | "fire_exit";
+type ZoneType = "normal" | "fire_exit" | "restricted" | "vip";
 
 interface EditorZone {
   dbId: string | null;
@@ -428,7 +428,7 @@ export default function ZoneEditor() {
 
       // Upsert all current zones (insert or update by zone_id)
       if (zones.length > 0) {
-        const rows = zones.map((z) => ({
+        const rows = Array.from(new Map(zones.map(z => [z.zone_id, z])).values()).map((z) => ({
           zone_id: z.zone_id,
           label: z.label,
           type: "other",
@@ -452,7 +452,7 @@ export default function ZoneEditor() {
       if (ed?.length === 2) queryClient.setQueryData(NAV_PATHS_PUBLIC_KEY, ed);
       setLastSaved(new Date().toLocaleTimeString());
     } catch (err) {
-      console.error("Failed to save zones:", err);
+      console.error("Failed to save zones:", JSON.stringify(err, null, 2));
       alert("Failed to save. Check the console for details.");
     } finally {
       setSaving(false);
@@ -633,10 +633,18 @@ export default function ZoneEditor() {
                 const isFire = z.zone_type === "fire_exit";
                 const fillColor = isSel
                   ? "rgba(59, 130, 246, 0.35)"
-                  : isFire
+                  : z.zone_type === "fire_exit"
                     ? "rgba(249, 115, 22, 0.3)"
+                  : z.zone_type === "restricted"
+                    ? "rgba(239, 68, 68, 0.3)"
+                  : z.zone_type === "vip"
+                    ? "rgba(168, 85, 247, 0.3)"
                     : "rgba(34, 197, 94, 0.3)";
-                const strokeColor = isSel ? "#3b82f6" : isFire ? "#f97316" : "#22c55e";
+                const strokeColor = isSel ? "#3b82f6" 
+                  : z.zone_type === "fire_exit" ? "#f97316" 
+                  : z.zone_type === "restricted" ? "#ef4444" 
+                  : z.zone_type === "vip" ? "#a855f7" 
+                  : "#22c55e";
                 return (
                   <g key={z.zone_id}>
                     <rect
@@ -740,10 +748,16 @@ export default function ZoneEditor() {
                         : "text-foreground hover:bg-muted/40"
                     }`}
                   >
-                    <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: z.zone_id === selectedId ? "#3b82f6" : z.zone_type === "fire_exit" ? "#f97316" : "#22c55e" }} />
+                    <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: z.zone_id === selectedId ? "#3b82f6" : z.zone_type === "fire_exit" ? "#f97316" : z.zone_type === "restricted" ? "#ef4444" : z.zone_type === "vip" ? "#a855f7" : "#22c55e" }} />
                     <span className="truncate">{z.label}</span>
                     {z.zone_type === "fire_exit" && (
                       <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-500 shrink-0">FIRE</span>
+                    )}
+                    {z.zone_type === "restricted" && (
+                      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-red-500/15 text-red-500 shrink-0">RESTRICTED</span>
+                    )}
+                    {z.zone_type === "vip" && (
+                      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-500 shrink-0">VIP</span>
                     )}
                     <span className="ml-auto text-[10px] font-mono text-muted-foreground shrink-0">{z.zone_id}</span>
                   </button>
@@ -822,11 +836,11 @@ export default function ZoneEditor() {
               <div>
                 <label className="text-[11px] text-muted-foreground block mb-1">Zone Type</label>
                 {canWrite ? (
-                  <div className="flex rounded-lg border border-border bg-muted/30 p-0.5">
+                  <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted/30 p-1">
                     <button
                       type="button"
                       onClick={() => updateZone(selected.zone_id, { zone_type: "normal" })}
-                      className={`flex-1 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                      className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
                         selected.zone_type === "normal"
                           ? "bg-green-500 text-white shadow-sm"
                           : "text-muted-foreground hover:text-foreground hover:bg-background"
@@ -837,7 +851,7 @@ export default function ZoneEditor() {
                     <button
                       type="button"
                       onClick={() => updateZone(selected.zone_id, { zone_type: "fire_exit" })}
-                      className={`flex-1 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                      className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
                         selected.zone_type === "fire_exit"
                           ? "bg-orange-500 text-white shadow-sm"
                           : "text-muted-foreground hover:text-foreground hover:bg-background"
@@ -845,12 +859,40 @@ export default function ZoneEditor() {
                     >
                       Fire Exit
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => updateZone(selected.zone_id, { zone_type: "restricted" })}
+                      className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        selected.zone_type === "restricted"
+                          ? "bg-red-500 text-white shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-background"
+                      }`}
+                    >
+                      Restricted
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateZone(selected.zone_id, { zone_type: "vip" })}
+                      className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        selected.zone_type === "vip"
+                          ? "bg-purple-500 text-white shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-background"
+                      }`}
+                    >
+                      VIP Area
+                    </button>
                   </div>
                 ) : (
                   <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                    selected.zone_type === "fire_exit" ? "bg-orange-500/15 text-orange-500" : "bg-green-500/15 text-green-500"
+                    selected.zone_type === "fire_exit" ? "bg-orange-500/15 text-orange-500" : 
+                    selected.zone_type === "restricted" ? "bg-red-500/15 text-red-500" :
+                    selected.zone_type === "vip" ? "bg-purple-500/15 text-purple-500" :
+                    "bg-green-500/15 text-green-500"
                   }`}>
-                    {selected.zone_type === "fire_exit" ? "Fire Exit" : "Normal"}
+                    {selected.zone_type === "fire_exit" ? "Fire Exit" : 
+                     selected.zone_type === "restricted" ? "Restricted" :
+                     selected.zone_type === "vip" ? "VIP Area" :
+                     "Normal"}
                   </span>
                 )}
               </div>

@@ -88,15 +88,6 @@ export default function DashboardLayout() {
           </div>
         </motion.main>
       </div>
-      <footer
-        className="shrink-0 bg-[hsl(var(--footer-background))] text-[hsl(var(--footer-foreground))] text-xs py-3 px-4 sm:px-6 pb-20 md:pb-3 border-t border-white/10 safe-area-bottom"
-        role="contentinfo"
-      >
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-          <span>Pinnacle Admin</span>
-          <span>Facility management &amp; navigation</span>
-        </div>
-      </footer>
       <MobileBottomNav />
     </div>
   );

@@ -11,7 +11,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function Login() {
-  const { login, isAuthenticated } = useAuth();
+  const { login, skipLogin, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -57,7 +57,7 @@ export default function Login() {
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
           <div className="w-12 h-12 rounded-xl overflow-hidden ring-2 ring-border/30 shadow-lg">
-            <img src="/favicon.ico" alt="Pinnacle" className="w-full h-full object-contain" />
+            <img src="/favicon.ico" alt="NavMe Demo" className="w-full h-full object-contain" />
           </div>
         </div>
 
@@ -66,7 +66,7 @@ export default function Login() {
             Welcome back
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Sign in to Pinnacle Admin
+            Sign in to NavMe Demo
           </p>
         </div>
 
@@ -86,7 +86,7 @@ export default function Login() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@pinnacle.com"
+                placeholder="admin@navmedemo.com"
                 required
                 autoComplete="email"
                 className="glass-input w-full pl-11 focus:shadow-[0_0_25px_hsla(221,83%,53%,0.1)]"
@@ -141,6 +141,7 @@ export default function Login() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.25 }}
+            className="space-y-3"
           >
             <motion.button
               type="submit"
@@ -151,6 +152,18 @@ export default function Login() {
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {loading ? "Signing in..." : "Sign In"}
+            </motion.button>
+            <motion.button
+              type="button"
+              onClick={() => {
+                skipLogin();
+                navigate(from, { replace: true });
+              }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full h-12 rounded-xl bg-secondary/50 hover:bg-secondary/70 text-secondary-foreground font-semibold text-sm flex items-center justify-center transition-colors"
+            >
+              Skip Login
             </motion.button>
           </motion.div>
         </form>

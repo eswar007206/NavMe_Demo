@@ -11,7 +11,6 @@ import Heatmap from "./pages/Heatmap";
 import ZoneEditor from "./pages/ZoneEditor";
 import EmergencySOS from "./pages/EmergencySOS";
 import NotFound from "./pages/NotFound";
-import Login from "./pages/Login";
 import AdminManagement from "./pages/AdminManagement";
 import Analytics from "./pages/Analytics";
 import { tableConfigs } from "./lib/tableConfig";
@@ -31,7 +30,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               {/* Public route */}
-              <Route path="/login" element={<Login />} />
+              <Route path="/login" element={<Navigate to="/" replace />} />
 
               {/* Protected dashboard routes */}
               <Route

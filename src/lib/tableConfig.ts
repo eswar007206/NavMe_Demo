@@ -118,7 +118,7 @@ export const tableConfigs: Record<string, TableConfig> = {
   ar_ropin_users: {
     tableName: "ar_ropin_users",
     displayName: "Users",
-    description: "Personnel and visitors in the Pinnacle network",
+    description: "Personnel and visitors in the facility network",
     primaryKey: "id",
     defaultSort: { key: "created_at", direction: "desc" },
     columns: [

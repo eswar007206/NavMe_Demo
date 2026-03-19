@@ -367,7 +367,7 @@ export default function EmergencySOS() {
     setShowConfirmDialog(false);
 
     // 1. Set emergency_state to active via RPC mapped function to bypass RLS securely
-    await supabase.rpc('toggle_emergency', { activate: true, email: 'admin@pinnacle.com' });
+    await supabase.rpc('toggle_emergency', { activate: true, email: 'admin@navmedemo.com' });
 
     // 2. Block all fire exit zones
     const fireZoneIds = fireExitZones.map((z) => z.zone_id);
@@ -393,7 +393,7 @@ export default function EmergencySOS() {
 
     try {
       // 1. Set emergency_state to inactive via RPC
-      const { error: rpcError } = await supabase.rpc('toggle_emergency', { activate: false, email: 'admin@pinnacle.com' });
+      const { error: rpcError } = await supabase.rpc('toggle_emergency', { activate: false, email: 'admin@navmedemo.com' });
       if (rpcError) {
         console.error("Stand down RPC failed:", rpcError);
         alert("Failed to stand down: " + rpcError.message);

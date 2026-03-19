@@ -3,7 +3,7 @@
  * Same AR ↔ building mapping; image pixels scale with FLOOR_IMG_*.
  */
 
-import { AR_BOUNDS } from "@/data/pinnacleArCoordinates";
+import { AR_BOUNDS } from "@/data/arCoordinates";
 import { BUILDING_BOUNDS } from "@/data/heatmapData";
 
 /** Reference size for legacy arToImage (align with office floor plan aspect). */

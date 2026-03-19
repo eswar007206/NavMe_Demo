@@ -342,7 +342,7 @@ export default function DataTable({ config }: DataTableProps) {
                     animate={{ opacity: 1, scale: 1 }}
                     className="flex flex-col items-center gap-3 text-muted-foreground"
                   >
-                    <img src="/favicon.ico" alt="Pinnacle" className="w-12 h-12 opacity-30" />
+                    <img src="/favicon.ico" alt="NavMe Demo" className="w-12 h-12 opacity-30" />
                     <p className="text-sm">{search ? "No results found" : "Nothing here yet"}</p>
                     {!search && canWrite && (
                       <button onClick={openAddForm} className="text-xs text-primary hover:underline">

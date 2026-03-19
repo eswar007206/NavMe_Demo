@@ -5,7 +5,7 @@ export const TECHNICIANS = [
   "Anjali Gupta", "Rohit Verma", "Kavita Nair", "Suresh Menon", "Deepa Joshi",
 ];
 
-export const BUILDINGS = ["Pinnacle Tower A", "Pinnacle Tower B"];
+export const BUILDINGS = ["NavMe Demo Building A", "NavMe Demo Building B"];
 
 export const FLOOR_NAMES = ["Ground Floor", "First Floor"];
 
@@ -82,8 +82,8 @@ export const NAVIGATION_USAGE = {
   uniqueUsers: 347,
   avgSessionsPerUser: 41.2,
   perBuilding: [
-    { name: "Pinnacle Tower A", sessions: 8412 },
-    { name: "Pinnacle Tower B", sessions: 5875 },
+    { name: "NavMe Demo Building A", sessions: 8412 },
+    { name: "NavMe Demo Building B", sessions: 5875 },
   ],
   perFloor: FLOOR_NAMES.map((f, i) => ({ name: f, sessions: [4120, 3890][i] })),
   perZone: ZONES.map((z, i) => ({

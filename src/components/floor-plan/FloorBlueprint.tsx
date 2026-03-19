@@ -26,6 +26,8 @@ export interface MapZoneData {
   y: number;
   w: number;
   h: number;
+  zone_type?: string;
+  is_blocked?: boolean;
 }
 
 export interface NavPathPoint {
@@ -152,8 +154,29 @@ function FloorBlueprintInner({
         <g pointerEvents="auto">
           {/* Clickable zones from DB */}
           {zones.map((zone) => {
-            const isBlocked = blockedZones.has(zone.zone_id);
+            const isBlocked = blockedZones ? blockedZones.has(zone.zone_id) : zone.is_blocked;
             const isHovered = hoveredZone === zone.zone_id;
+
+            let fillCol = "rgba(34, 197, 94, 0.3)";
+            let strokeCol = "#22c55e";
+
+            if (isBlocked) {
+              fillCol = isHovered ? "rgba(239, 68, 68, 0.55)" : "rgba(239, 68, 68, 0.4)";
+              strokeCol = "#ef4444";
+            } else if (zone.zone_type === "fire_exit") {
+              fillCol = isHovered ? "rgba(249, 115, 22, 0.5)" : "rgba(249, 115, 22, 0.3)";
+              strokeCol = "#f97316";
+            } else if (zone.zone_type === "vip") {
+              fillCol = isHovered ? "rgba(168, 85, 247, 0.5)" : "rgba(168, 85, 247, 0.3)";
+              strokeCol = "#a855f7";
+            } else if (zone.zone_type === "restricted") { 
+              fillCol = isHovered ? "rgba(239, 68, 68, 0.5)" : "rgba(239, 68, 68, 0.3)";
+              strokeCol = "#ef4444";
+            } else {
+              fillCol = isHovered ? "rgba(34, 197, 94, 0.55)" : "rgba(34, 197, 94, 0.3)";
+              strokeCol = "#22c55e";
+            }
+
             return (
               <rect
                 key={zone.zone_id}
@@ -161,12 +184,8 @@ function FloorBlueprintInner({
                 y={zone.y}
                 width={zone.w}
                 height={zone.h}
-                fill={
-                  isBlocked
-                    ? isHovered ? "rgba(239, 68, 68, 0.55)" : "rgba(239, 68, 68, 0.4)"
-                    : isHovered ? "rgba(34, 197, 94, 0.55)" : "rgba(34, 197, 94, 0.3)"
-                }
-                stroke={isBlocked ? "#ef4444" : "#22c55e"}
+                fill={fillCol}
+                stroke={strokeCol}
                 strokeWidth={isHovered ? 3 : 2}
                 rx={3}
                 style={{ cursor: "pointer", transition: "fill 0.15s, stroke-width 0.15s" }}

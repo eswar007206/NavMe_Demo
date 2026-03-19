@@ -9,7 +9,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import type { AdminUser, AuthSession } from "@/lib/auth-types";
 
-const STORAGE_KEY = "pinnacle-admin-session";
+const STORAGE_KEY = "navme-demo-admin-session";
 const SESSION_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours
 
 interface AuthContextType {
@@ -18,8 +18,10 @@ interface AuthContextType {
   isLoading: boolean;
   isSuperAdmin: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  skipLogin: () => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  updateAvatar: (url: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -28,13 +30,32 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   isSuperAdmin: false,
   login: async () => ({ success: false }),
+  skipLogin: () => {},
   logout: () => {},
   refreshUser: async () => {},
+  updateAvatar: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AdminUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<AdminUser | null>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const session = JSON.parse(stored) as AuthSession;
+        if (session.user && session.user.id === "demo-admin") {
+          return session.user;
+        }
+      }
+    } catch {}
+    return {
+      id: "demo-admin",
+      email: "demo@navme.com",
+      display_name: "Demo Admin",
+      role: "super_admin",
+      avatar_url: null,
+    };
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
   const persistSession = useCallback((adminUser: AdminUser) => {
     const session: AuthSession = { user: adminUser, loginAt: Date.now() };
@@ -45,6 +66,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(STORAGE_KEY);
     setUser(null);
   }, []);
+
+  const skipLogin = useCallback(() => {
+    const adminUser: AdminUser = {
+      id: "demo-admin",
+      email: "demo@navme.com",
+      display_name: "Demo Admin",
+      role: "super_admin",
+      avatar_url: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    setUser(adminUser);
+    persistSession(adminUser);
+  }, [persistSession]);
 
   // Validate a stored session against the DB
   const validateSession = useCallback(
@@ -73,27 +108,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // On mount: restore session from localStorage
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) {
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const session: AuthSession = JSON.parse(stored);
-      if (Date.now() - session.loginAt > SESSION_MAX_AGE) {
-        clearSession();
-        setIsLoading(false);
-        return;
-      }
-      // Optimistically set user, then validate
-      setUser(session.user);
-      validateSession(session.user.id).finally(() => setIsLoading(false));
-    } catch {
-      clearSession();
-      setIsLoading(false);
-    }
-  }, [clearSession, validateSession]);
+    // Auth bypass: always default to demo user immediately
+    setIsLoading(false);
+  }, []);
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -130,6 +147,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await validateSession(user.id);
   }, [user, validateSession]);
 
+  const updateAvatar = useCallback((url: string) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, avatar_url: url };
+      persistSession(updated);
+      return updated;
+    });
+  }, [persistSession]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -138,8 +164,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isSuperAdmin: user?.role === "super_admin",
         login,
+        skipLogin,
         logout,
         refreshUser,
+        updateAvatar,
       }}
     >
       {children}

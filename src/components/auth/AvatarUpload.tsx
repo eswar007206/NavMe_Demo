@@ -47,16 +47,22 @@ export function AvatarUpload({
       return;
     }
 
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    setSelectedFile(file);
-    setShowDialog(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64Url = event.target?.result as string;
+      if (base64Url) {
+        setPreview(base64Url);
+        setSelectedFile(file);
+        setShowDialog(true);
+      }
+    };
+    reader.readAsDataURL(file);
+    
     // Reset the input so the same file can be re-selected
     e.target.value = "";
   }
 
   function closeDialog() {
-    if (preview) URL.revokeObjectURL(preview);
     setPreview(null);
     setSelectedFile(null);
     setShowDialog(false);
@@ -67,27 +73,9 @@ export function AvatarUpload({
     setUploading(true);
 
     try {
-      const ext = selectedFile.name.split(".").pop() || "png";
-      const filePath = `${adminId}/${Date.now()}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("admin-avatars")
-        .upload(filePath, selectedFile, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("admin-avatars")
-        .getPublicUrl(filePath);
-
-      // Update profile in DB
-      await supabase.rpc("update_admin_profile", {
-        p_admin_id: adminId,
-        p_avatar_url: publicUrl,
-      });
-
-      await refreshUser();
-      onUploaded?.(publicUrl);
+      // Mock upload for the dummy admin
+      const url = preview || "";
+      onUploaded?.(url);
       closeDialog();
     } catch (err) {
       console.error("Avatar upload failed:", err);

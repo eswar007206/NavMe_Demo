@@ -3,7 +3,7 @@
  * two vertical pathways with circle + rounded rectangle each (black on white).
  */
 
-import { AR_BOUNDS } from "./pinnacleArCoordinates";
+import { AR_BOUNDS } from "./arCoordinates";
 
 const xL = 24;
 const xR = 55;

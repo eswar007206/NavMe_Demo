@@ -1,5 +1,5 @@
 /**
- * Pinnacle Office - Ground Floor Blueprint
+ * Office - Ground Floor Blueprint
  * Map = coordinate space (game map style).
  * Left → right = X, top → bottom = Y. Every object has (x, y).
  * Building (pos_x, pos_z) from DB is transformed to map (x, y) for SVG.

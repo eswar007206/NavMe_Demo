@@ -74,7 +74,6 @@ function FloorPlane({
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.minFilter = THREE.LinearFilter;
   texture.magFilter = THREE.LinearFilter;
-  texture.flipY = false;
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[worldW / 2, 0, worldD / 2]} receiveShadow>
@@ -91,6 +90,10 @@ const GREEN = new THREE.Color("#22c55e");
 const GREEN_HV = new THREE.Color("#4ade80");
 const RED = new THREE.Color("#ef4444");
 const RED_HV = new THREE.Color("#f87171");
+const ORANGE = new THREE.Color("#f97316");
+const ORANGE_HV = new THREE.Color("#fb923c");
+const PURPLE = new THREE.Color("#a855f7");
+const PURPLE_HV = new THREE.Color("#c084fc");
 
 function ZoneBlock({
   zone,
@@ -114,7 +117,25 @@ function ZoneBlock({
   const { wx, wz } = imgToWorld(zone.x, zone.y, pw, ph, worldW, worldD);
   const w3 = (zone.w / pw) * worldW;
   const d3 = (zone.h / ph) * worldD;
-  const color = isBlocked ? (hovered ? RED_HV : RED) : (hovered ? GREEN_HV : GREEN);
+  
+  let targetColor = hovered ? GREEN_HV : GREEN;
+  let dotColor = "#22c55e";
+
+  if (isBlocked) {
+    targetColor = hovered ? RED_HV : RED;
+    dotColor = "#ef4444";
+  } else if (zone.zone_type === "fire_exit") {
+    targetColor = hovered ? ORANGE_HV : ORANGE;
+    dotColor = "#f97316";
+  } else if (zone.zone_type === "vip") {
+    targetColor = hovered ? PURPLE_HV : PURPLE;
+    dotColor = "#a855f7";
+  } else if (zone.zone_type === "restricted") { 
+    targetColor = hovered ? RED_HV : RED;
+    dotColor = "#ef4444";
+  }
+
+  const color = targetColor;
 
   useFrame(() => {
     if (!ref.current) return;
@@ -154,8 +175,8 @@ function ZoneBlock({
       <mesh position={[wx + w3 / 2, ZONE_H + 0.5, wz + d3 / 2]}>
         <sphereGeometry args={[0.08, 16, 16]} />
         <meshStandardMaterial
-          color={isBlocked ? "#ef4444" : "#22c55e"}
-          emissive={isBlocked ? "#ef4444" : "#22c55e"}
+          color={dotColor}
+          emissive={dotColor}
           emissiveIntensity={0.6}
         />
       </mesh>
@@ -166,25 +187,48 @@ function ZoneBlock({
 /* ── Person pin ──────────────────────────────────────────────────── */
 
 function PersonPin({ position, label }: { position: [number, number, number]; label: string }) {
-  const ref = useRef<THREE.Mesh>(null);
+  const groupRef = useRef<THREE.Group>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
+  const ringRef = useRef<THREE.Mesh>(null);
+  const textRef = useRef<THREE.Group>(null);
+  
   const off = useMemo(() => Math.random() * Math.PI * 2, []);
+  
+  // Create randomized wander path parameters
+  const wanderRadius = useMemo(() => 0.5 + Math.random() * 1.5, []);
+  const wanderSpeedX = useMemo(() => 0.2 + Math.random() * 0.3, []);
+  const wanderSpeedZ = useMemo(() => 0.2 + Math.random() * 0.3, []);
+
   useFrame(({ clock }) => {
-    if (ref.current) ref.current.position.y = position[1] + Math.sin(clock.getElapsedTime() * 2 + off) * 0.05;
+    const t = clock.getElapsedTime();
+    
+    // Vertical bobbing (only the model)
+    if (meshRef.current) meshRef.current.position.y = position[1] + Math.sin(t * 2 + off) * 0.05;
+
+    // Horizontal wandering (the whole group)
+    if (groupRef.current) {
+      const offsetX = Math.sin(t * wanderSpeedX + off) * wanderRadius;
+      const offsetZ = Math.cos(t * wanderSpeedZ + off * 2) * wanderRadius;
+      groupRef.current.position.x = position[0] + offsetX;
+      groupRef.current.position.z = position[2] + offsetZ;
+    }
   });
 
   return (
-    <group>
-      <mesh ref={ref} position={position} castShadow>
+    <group ref={groupRef}>
+      <mesh ref={meshRef} position={[0, position[1], 0]} castShadow>
         <sphereGeometry args={[0.08, 18, 18]} />
         <meshStandardMaterial color="#3b82f6" emissive="#3b82f6" emissiveIntensity={0.4} roughness={0.2} metalness={0.3} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[position[0], 0.02, position[2]]}>
+      <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <ringGeometry args={[0.06, 0.11, 20]} />
         <meshBasicMaterial color="#3b82f6" transparent opacity={0.5} side={THREE.DoubleSide} />
       </mesh>
-      <Text position={[position[0], position[1] + 0.2, position[2]]} fontSize={0.11} color="white" anchorX="center" anchorY="middle" outlineWidth={0.012} outlineColor="#1e3a5f" font={undefined}>
-        {label}
-      </Text>
+      <group ref={textRef} position={[0, position[1] + 0.2, 0]}>
+        <Text fontSize={0.11} color="white" anchorX="center" anchorY="middle" outlineWidth={0.012} outlineColor="#1e3a5f" font={undefined}>
+          {label}
+        </Text>
+      </group>
     </group>
   );
 }
@@ -399,14 +443,6 @@ export function FloorBlueprint3D({
     [onZoneToggle]
   );
 
-  const navLinePoints = useMemo(() => {
-    if (!navPathPoints.length) return [] as [number, number, number][];
-    return navPathPoints.map(
-      (p) =>
-        [(p.x / planWidth) * worldW, 0.32, (p.y / planHeight) * worldD] as [number, number, number],
-    );
-  }, [navPathPoints, planWidth, planHeight, worldW, worldD]);
-
   return (
     <div className={`${className} relative`} style={{ width, height, minHeight: 400 }}>
       <Canvas
@@ -433,20 +469,6 @@ export function FloorBlueprint3D({
         <Suspense fallback={<LoadingPlane worldW={worldW} worldD={worldD} />}>
           <FloorPlane image={floorPlanImage} worldW={worldW} worldD={worldD} />
         </Suspense>
-
-        {navLinePoints.length >= 2 && (
-          <Line points={navLinePoints} color="#2563eb" lineWidth={2} dashed={false} />
-        )}
-        {navPathPoints.map((p, i) => (
-          <mesh
-            key={`nav-${i}`}
-            position={[(p.x / planWidth) * worldW, 0.42, (p.y / planHeight) * worldD]}
-            castShadow
-          >
-            <sphereGeometry args={[0.08, 12, 12]} />
-            <meshStandardMaterial color="#2563eb" emissive="#1e40af" emissiveIntensity={0.35} />
-          </mesh>
-        ))}
 
         {zones.map((zone) => (
           <ZoneBlock

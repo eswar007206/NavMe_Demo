@@ -51,7 +51,7 @@ type NavGroup = {
   children: NavItem[];
 };
 
-const SIDEBAR_STORAGE_KEY = "pinnacle-sidebar-open";
+const SIDEBAR_STORAGE_KEY = "navme-sidebar-open";
 
 const baseNavStructure: (NavItem | NavGroup)[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -96,7 +96,7 @@ export default function DashboardSidebar() {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, isSuperAdmin } = useAuth();
+  const { user, logout, isSuperAdmin, updateAvatar } = useAuth();
 
   const navStructure = useMemo(() => {
     const items = [...baseNavStructure];
@@ -169,6 +169,7 @@ export default function DashboardSidebar() {
                 displayName={user.display_name}
                 adminId={user.id}
                 size="w-10 h-10"
+                onUploaded={updateAvatar}
               />
             ) : (
               <Avatar className="w-10 h-10 rounded-xl ring-2 ring-white/10 shrink-0">
@@ -218,10 +219,10 @@ export default function DashboardSidebar() {
         ) : (
           <div className="flex items-center gap-3 px-2">
             <div className="w-10 h-10 rounded-xl shrink-0 overflow-hidden ring-2 ring-white/10">
-              <img src="/favicon.ico" alt="Pinnacle" className="w-full h-full object-contain" />
+              <img src="/favicon.ico" alt="NavMe Demo" className="w-full h-full object-contain" />
             </div>
-            {!collapsed && (
-              <span className={`text-lg font-bold tracking-tight ${textNorm}`}>Pinnacle</span>
+            {!isCollapsed && (
+              <span className={`text-lg font-bold tracking-tight ${textNorm}`}>NavMe Demo</span>
             )}
           </div>
         )}

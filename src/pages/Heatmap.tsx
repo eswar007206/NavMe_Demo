@@ -12,6 +12,8 @@ import {
   LuLayoutGrid as LayoutGrid,
   LuDoorOpen as DoorOpen,
   LuConstruction as Construction,
+  LuMaximize as Maximize,
+  LuMinimize as Minimize,
 } from "react-icons/lu";
 import { supabase } from "@/lib/supabase";
 import { PageHeader } from "@/components/dashboard/PageHeader";
@@ -20,7 +22,7 @@ import type { PersonOnMap, NavPathPoint } from "@/components/floor-plan/FloorBlu
 import { BUILDING_OUTLINE, BUILDING_BOUNDS, getBuildingOutlineBoundingBox } from "@/data/heatmapData";
 import { fetchFloorNavPathsRows } from "@/lib/floorNavPaths";
 import { FLOOR_MAP_PNG, getFloorPlanPixels } from "@/data/floorPlanDimensions";
-import { AR_BOUNDS } from "@/data/pinnacleArCoordinates";
+import { AR_BOUNDS } from "@/data/arCoordinates";
 
 const FloorBlueprint3D = lazy(() => import("@/components/floor-plan/FloorBlueprint3D"));
 
@@ -34,7 +36,6 @@ const BUILDING_PADDING = 0.3;
 
 const FLOORS: { key: FloorKey; label: string }[] = [
   { key: "ground", label: "Ground Floor" },
-  { key: "first", label: "First Floor" },
 ];
 
 /** Ray-casting point-in-polygon check against the building outline. */
@@ -150,9 +151,11 @@ export default function Heatmap() {
   /* ── Floor selector ── */
   const [activeFloor, setActiveFloor] = useState<FloorKey>("ground");
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>("3d");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [selectedZoneType, setSelectedZoneType] = useState<string>("all");
   const [peopleByFloor, setPeopleByFloor] = useState<Record<FloorKey, PersonOnMap[]>>(() => ({
     ground: createDummyPeople("g"),
-    first: createDummyPeople("f"),
+    first: [],
   }));
   const currentFloor = FLOORS.find((f) => f.key === activeFloor)!;
   const floorImage = FLOOR_MAP_PNG[activeFloor];
@@ -178,6 +181,7 @@ export default function Heatmap() {
         h: Number(r.h),
         is_blocked: r.is_blocked as boolean,
         floor: (r.floor as string) || "ground",
+        zone_type: (r.zone_type as string) || "normal",
       }));
     },
     refetchInterval: 10000,
@@ -185,10 +189,10 @@ export default function Heatmap() {
 
   const allZones = useMemo(() => dbZones ?? [], [dbZones]);
 
-  // Filter zones for the active floor
+  // Filter zones for the active floor and type
   const mapZones = useMemo(
-    () => allZones.filter((z) => z.floor === activeFloor),
-    [allZones, activeFloor]
+    () => allZones.filter((z) => z.floor === activeFloor && (selectedZoneType === "all" || z.zone_type === selectedZoneType)),
+    [allZones, activeFloor, selectedZoneType]
   );
 
   const blockedZones = useMemo(() => {
@@ -315,80 +319,124 @@ export default function Heatmap() {
       />
 
       {/* ── Floor Plan Map ── */}
-      <section className="rounded-xl border border-border bg-card shadow-sm overflow-hidden px-4 sm:px-5 pt-4 sm:pt-5 pb-0" aria-label="Floor map">
-        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold text-foreground">{currentFloor.label} — Zone Map</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Click on any zone to block (red) or unblock (green) it
-            </p>
+      <section
+        className={
+          isFullscreen
+            ? "fixed inset-0 z-[100] bg-[#050505] flex flex-col !mt-0 !mb-0 !ml-0 !mr-0"
+            : "rounded-xl border border-border bg-card shadow-sm overflow-hidden px-4 sm:px-5 pt-4 sm:pt-5 pb-0 relative"
+        }
+        aria-label="Floor map"
+      >
+        <header className={
+          isFullscreen
+            ? "absolute top-4 left-4 right-4 z-10 bg-background/95 backdrop-blur-xl border border-border/50 shadow-2xl rounded-2xl p-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4"
+            : "flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 mb-4"
+        }>
+          <div className="min-w-0 flex justify-between items-start xl:items-center">
+            <div>
+              <h2 className="text-xl font-bold text-foreground">{currentFloor.label}</h2>
+            </div>
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="xl:hidden p-2 bg-muted hover:bg-secondary rounded-md"
+            >
+              {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+            </button>
           </div>
-          <div className="flex items-center gap-4 shrink-0">
-            {/* Floor selector tabs */}
-            <div className="flex rounded-lg border border-border bg-muted/30 p-0.5">
-              {FLOORS.map((floor) => (
+          <div className="flex flex-wrap items-center gap-4 shrink-0">
+            {/* Floor selector removed as we only have Ground Floor */}
+
+            {/* Zone Filter */}
+            <div className="flex rounded-lg border border-border bg-muted/30 p-0.5 max-w-full overflow-x-auto whitespace-nowrap">
+              {[
+                { key: "all", label: "All Zones" },
+                { key: "normal", label: "Normal" },
+                { key: "fire_exit", label: "Fire Exit" },
+                { key: "restricted", label: "Restricted" },
+                { key: "vip", label: "VIP" }
+              ].map(f => (
                 <button
-                  key={floor.key}
-                  type="button"
-                  onClick={() => setActiveFloor(floor.key)}
+                  key={f.key}
+                  onClick={() => setSelectedZoneType(f.key)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                    activeFloor === floor.key
-                      ? "bg-primary text-primary-foreground shadow-sm"
+                    selectedZoneType === f.key
+                      ? "bg-secondary text-secondary-foreground shadow-sm bg-muted text-foreground"
                       : "text-muted-foreground hover:text-foreground hover:bg-background"
                   }`}
                 >
-                  {floor.label}
+                  {f.label}
                 </button>
               ))}
             </div>
 
-            {/* 2D / 3D toggle */}
-            <div className="flex rounded-lg border border-border bg-muted/30 p-0.5" aria-label="Map view toggle">
+            {/* 2D / 3D toggle & Fullscreen */}
+            <div className="flex rounded-lg border border-border bg-muted/30 p-0.5 items-center gap-1" aria-label="Map view toggle">
+              <div className="flex">
+                <button
+                  type="button"
+                  onClick={() => setMapViewMode("2d")}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    mapViewMode === "2d"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-background"
+                  }`}
+                >
+                  2D
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMapViewMode("3d")}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    mapViewMode === "3d"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-background"
+                  }`}
+                >
+                  3D
+                </button>
+              </div>
+              <div className="w-px h-4 bg-border mx-1 hidden xl:block" />
               <button
                 type="button"
-                onClick={() => setMapViewMode("2d")}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  mapViewMode === "2d"
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-background"
-                }`}
+                onClick={() => setIsFullscreen(!isFullscreen)}
+                className="hidden xl:flex px-2 py-1.5 text-xs font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-background transition-colors items-center gap-1"
+                aria-label="Toggle fullscreen"
               >
-                2D
-              </button>
-              <button
-                type="button"
-                onClick={() => setMapViewMode("3d")}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  mapViewMode === "3d"
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-background"
-                }`}
-              >
-                3D
+                {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
               </button>
             </div>
 
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-sm bg-green-500/50" aria-hidden /> Open
+                <span className="w-3 h-3 rounded-sm bg-green-500/70" aria-hidden /> Normal (Open)
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-sm bg-red-500/50" aria-hidden /> Restricted
+                <span className="w-3 h-3 rounded-sm bg-red-500/70" aria-hidden /> Blocked/Restricted
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-sm bg-orange-500/70" aria-hidden /> Fire Exit
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-sm bg-purple-500/70" aria-hidden /> VIP
               </span>
             </div>
           </div>
 
         </header>
 
-        <div className="rounded-xl overflow-hidden border border-border/50 bg-background">
+        <div className={
+          isFullscreen
+            ? "absolute inset-0 z-0 flex flex-col items-center justify-center bg-[#050505]"
+            : "rounded-xl overflow-hidden border border-border/50 bg-background"
+        }>
           {mapViewMode === "2d" ? (
             <FloorBlueprint
               key={`2d-${activeFloor}`}
               planWidth={planDims.w}
               planHeight={planDims.h}
               floorPlanImage={floorImage}
-              className="w-full"
-              height={820}
+              className={`w-full ${isFullscreen ? "h-full" : ""}`}
+              height={isFullscreen ? "100vh" : 820}
               people={peopleByFloor[activeFloor]}
               zones={mapZones}
               blockedZones={blockedZones}
@@ -397,7 +445,7 @@ export default function Heatmap() {
             />
           ) : (
             <Suspense fallback={
-              <div className="w-full flex items-center justify-center text-muted-foreground" style={{ height: 820 }}>
+              <div className={`w-full flex items-center justify-center text-muted-foreground ${isFullscreen ? "h-full min-h-[50vh]" : ""}`} style={{ height: isFullscreen ? "100vh" : 820 }}>
                 <Loader2 className="w-6 h-6 animate-spin mr-3" /> Loading 3D map...
               </div>
             }>
@@ -406,8 +454,8 @@ export default function Heatmap() {
                 planWidth={planDims.w}
                 planHeight={planDims.h}
                 floorPlanImage={floorImage}
-                className="w-full"
-                height={820}
+                className={`w-full ${isFullscreen ? "h-full" : ""}`}
+                height={isFullscreen ? "100vh" : 820}
                 people={peopleByFloor[activeFloor]}
                 zones={mapZones}
                 blockedZones={blockedZones}
@@ -417,20 +465,20 @@ export default function Heatmap() {
             </Suspense>
           )}
           {blockedZones.size > 0 && (
-            <div className="px-4 py-2.5 border-t border-border/50 bg-muted/30 flex items-center justify-between gap-2 flex-wrap">
+            <div className={`px-4 py-2.5 border-t border-border/50 flex items-center justify-between gap-6 flex-wrap ${isFullscreen ? "absolute bottom-[72px] left-4 z-[100] max-w-[calc(100vw-100px)] bg-background/95 backdrop-blur-xl rounded-lg shadow-xl" : "bg-muted/30"}`}>
               <span className="text-sm font-medium text-foreground">
                 Restricted zones: <strong>{blockedZones.size}</strong>
               </span>
               <button
                 type="button"
                 onClick={handleUnblockAll}
-                className="text-xs text-muted-foreground hover:text-foreground underline"
+                className="text-xs text-muted-foreground hover:text-foreground underline whitespace-nowrap"
               >
                 Open all
               </button>
             </div>
           )}
-          <div className="px-4 py-2.5 border-t border-border/50 flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-muted-foreground">
+          <div className={`px-4 py-2.5 border-t border-border/50 flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-muted-foreground ${isFullscreen ? "absolute bottom-4 left-4 z-[100] max-w-[calc(100vw-100px)] bg-background/95 backdrop-blur-xl shadow-xl rounded-lg" : ""}`}>
             <span className="font-medium text-foreground">Legend:</span>
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-green-500/50" aria-hidden /> Open</span>
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-500/50" aria-hidden /> Restricted</span>
@@ -501,7 +549,14 @@ export default function Heatmap() {
             animate="show"
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
           >
-            {items?.map((item) => {
+            {items?.filter((item) => {
+              if (currentTab.key !== "zones") return true;
+              if (selectedZoneType === "all") return true;
+              // Map the item to its actual DB zone to check its type
+              const dbZ = dbZones?.find((z) => String(z.zone_id) === String(item.access_zone_id || item.id) || String(z.id) === String(item.access_zone_id || item.id));
+              if (!dbZ) return false;
+              return dbZ.zone_type === selectedZoneType;
+            }).map((item) => {
               const isBlocked = !(localStatus[item.id] ?? item.is_active ?? true);
               const displayName = (item[currentTab.nameField] || item.id) as string;
               const displayDesc = (item.description ?? "") as string;

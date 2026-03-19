@@ -21,7 +21,7 @@ import { FloorBlueprint } from "@/components/floor-plan/FloorBlueprint";
 import type { PersonOnMap, NavPathPoint } from "@/components/floor-plan/FloorBlueprint";
 import { BUILDING_OUTLINE, BUILDING_BOUNDS, getBuildingOutlineBoundingBox } from "@/data/heatmapData";
 import { FLOOR_MAP_PNG, getFloorPlanPixels } from "@/data/floorPlanDimensions";
-import { AR_BOUNDS } from "@/data/pinnacleArCoordinates";
+import { AR_BOUNDS } from "@/data/arCoordinates";
 import { fetchFloorNavPathsRows } from "@/lib/floorNavPaths";
 
 const FloorBlueprint3D = lazy(() => import("@/components/floor-plan/FloorBlueprint3D"));
@@ -150,6 +150,7 @@ export default function AccessControl() {
     first: createDummyPeople("f"),
   }));
   const [activeTab, setActiveTab] = useState<TabKey>("floors");
+  const [selectedZoneType, setSelectedZoneType] = useState<string>("all");
   const [localStatus, setLocalStatus] = useState<Record<string, boolean>>({});
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -174,6 +175,32 @@ export default function AccessControl() {
     refetchOnMount: "always",
     refetchInterval: 5000,
   });
+
+  const { data: dbZones } = useQuery({
+    queryKey: ["access-control-zones"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("access_control_zones")
+        .select("*")
+        .order("zone_id");
+      if (error) throw error;
+      return (data ?? []).map((r: Record<string, unknown>) => ({
+        zone_id: r.zone_id as string,
+        label: r.label as string,
+        x: Number(r.x),
+        y: Number(r.y),
+        w: Number(r.w),
+        h: Number(r.h),
+        floor: (r.floor as string) || "ground",
+        zone_type: (r.zone_type as string) || "normal",
+      }));
+    },
+  });
+
+  const visibleZones = useMemo(() => {
+    if (!dbZones) return [];
+    return dbZones.filter((z) => z.floor === activeFloor && (selectedZoneType === "all" || z.zone_type === selectedZoneType));
+  }, [dbZones, activeFloor, selectedZoneType]);
 
   useEffect(() => {
     const onUpd = () => {
@@ -294,21 +321,46 @@ export default function AccessControl() {
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex rounded-lg border border-border bg-muted/30 p-0.5">
-              {FLOOR_OPTIONS.map((floor) => (
-                <button
-                  key={floor.key}
-                  type="button"
-                  onClick={() => setActiveFloor(floor.key)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                    activeFloor === floor.key
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-background"
-                  }`}
-                >
-                  {floor.label}
-                </button>
-              ))}
+<div className="flex flex-wrap items-center gap-2">
+                <div className="flex rounded-lg border border-border bg-muted/30 p-0.5">
+                  {FLOOR_OPTIONS.map((floor) => (
+                    <button
+                      key={floor.key}
+                      type="button"
+                      onClick={() => setActiveFloor(floor.key)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        activeFloor === floor.key
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-background"
+                      }`}
+                    >
+                      {floor.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Zone Filter */}
+                <div className="flex rounded-lg border border-border bg-muted/30 p-0.5 max-w-full overflow-x-auto whitespace-nowrap">
+                  {[
+                    { key: "all", label: "All Zones" },
+                    { key: "normal", label: "Normal" },
+                    { key: "fire_exit", label: "Fire Exit" },
+                    { key: "restricted", label: "Restricted" },
+                    { key: "vip", label: "VIP" }
+                  ].map(f => (
+                    <button
+                      key={f.key}
+                      onClick={() => setSelectedZoneType(f.key)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        selectedZoneType === f.key
+                          ? "bg-secondary text-secondary-foreground shadow-sm bg-muted text-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-background"
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
             </div>
 
             <div className="flex rounded-lg border border-border bg-muted/30 p-0.5" aria-label="Map view toggle">
@@ -348,7 +400,7 @@ export default function AccessControl() {
               className="w-full"
               height={720}
               people={peopleByFloor[activeFloor]}
-              navPathPoints={navPathPoints}
+              navPathPoints={navPathPoints} zones={visibleZones}
             />
           ) : (
             <Suspense
@@ -366,7 +418,7 @@ export default function AccessControl() {
                 className="w-full"
                 height={720}
                 people={peopleByFloor[activeFloor]}
-                navPathPoints={navPathPoints}
+                navPathPoints={navPathPoints} zones={visibleZones}
               />
             </Suspense>
           )}
@@ -483,7 +535,13 @@ export default function AccessControl() {
               animate="show"
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
             >
-              {items?.map((item) => {
+              {items?.filter(item => {
+                if (currentTab.key !== "zones") return true;
+                if (selectedZoneType === "all") return true;
+                const dbZ = dbZones?.find((z) => String(z.id) === String(item.access_zone_id || item.id));
+                if (!dbZ) return false;
+                return dbZ.zone_type === selectedZoneType;
+              }).map((item) => {
                 const isBlocked = !(localStatus[item.id] ?? item.is_active ?? true);
                 const displayName = (item[currentTab.nameField] || item.id) as string;
                 const displayDesc = (item.description ?? "") as string;
