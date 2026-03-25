@@ -42,18 +42,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const session = JSON.parse(stored) as AuthSession;
-        if (session.user && session.user.id === "demo-admin") {
-          return session.user;
-        }
+        return session.user;
       }
     } catch {}
-    return {
-      id: "demo-admin",
-      email: "demo@navme.com",
-      display_name: "Demo Admin",
-      role: "super_admin",
-      avatar_url: null,
-    };
+    return null;
   });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -84,6 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Validate a stored session against the DB
   const validateSession = useCallback(
     async (adminId: string) => {
+      // Don't validate the demo admin against the database
+      if (adminId === "demo-admin") {
+        return;
+      }
       try {
         const { data, error } = await supabase
           .from("dashboard_admins_safe")
@@ -114,6 +110,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
+      if (email === "demo@navme" && password === "123456") {
+        const adminUser: AdminUser = {
+          id: "demo-admin",
+          email: "demo@navme",
+          display_name: "Demo Super Admin",
+          role: "super_admin",
+          avatar_url: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        setUser(adminUser);
+        persistSession(adminUser);
+        return { success: true };
+      }
+
       try {
         const { data, error } = await supabase.rpc("verify_admin_login", {
           p_email: email,

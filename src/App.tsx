@@ -13,6 +13,7 @@ import EmergencySOS from "./pages/EmergencySOS";
 import NotFound from "./pages/NotFound";
 import AdminManagement from "./pages/AdminManagement";
 import Analytics from "./pages/Analytics";
+import Login from "./pages/Login";
 import { tableConfigs } from "./lib/tableConfig";
 import { ThemeProvider } from "./components/theme-provider";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -30,7 +31,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               {/* Public route */}
-              <Route path="/login" element={<Navigate to="/" replace />} />
+              <Route path="/login" element={<Login />} />
 
               {/* Protected dashboard routes */}
               <Route

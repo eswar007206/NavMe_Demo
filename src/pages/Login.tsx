@@ -83,10 +83,10 @@ export default function Login() {
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@navmedemo.com"
+                placeholder="demo@navme"
                 required
                 autoComplete="email"
                 className="glass-input w-full pl-11 focus:shadow-[0_0_25px_hsla(221,83%,53%,0.1)]"
@@ -152,18 +152,6 @@ export default function Login() {
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {loading ? "Signing in..." : "Sign In"}
-            </motion.button>
-            <motion.button
-              type="button"
-              onClick={() => {
-                skipLogin();
-                navigate(from, { replace: true });
-              }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full h-12 rounded-xl bg-secondary/50 hover:bg-secondary/70 text-secondary-foreground font-semibold text-sm flex items-center justify-center transition-colors"
-            >
-              Skip Login
             </motion.button>
           </motion.div>
         </form>
